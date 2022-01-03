@@ -29,11 +29,11 @@ type server struct {
 	gRPC.UnsafeIncrementSystemServer
 }
 
-func (s server) Increment(ctx context.Context, request *gRPC.IncrementRequest) (*gRPC.IncrementResponse, error) {
+func (s server) Increment(_ context.Context, request *gRPC.IncrementRequest) (*gRPC.IncrementResponse, error) {
 	waitForYourTurn(request.ClientID, request.RequestID)
 	setClientRequestNumber(request.ClientID, request.RequestID)
 	if request.Value <= clientPreviousValue[request.ClientID] {
-		return &gRPC.IncrementResponse{Value: getClientPreviousValue(request.ClientID)}, errors.New("Value is not greater than previous one")
+		return &gRPC.IncrementResponse{Value: getClientPreviousValue(request.ClientID)}, errors.New("value is not greater than previous one")
 	}
 	value := getCurrentValue()
 	setClientPreviousValue(request.ClientID, request.Value)
@@ -41,7 +41,7 @@ func (s server) Increment(ctx context.Context, request *gRPC.IncrementRequest) (
 	return &gRPC.IncrementResponse{Value: value}, nil
 }
 
-func (s server) PingServer(ctx context.Context, ping *gRPC.Ping) (*gRPC.Empty, error) {
+func (s server) PingServer(_ context.Context, ping *gRPC.Ping) (*gRPC.Empty, error) {
 	log.Println("Received ping from: ", ping.ClientID)
 	clientRequestNumber[ping.ClientID] = 0
 	clientPreviousValue[ping.ClientID] = 0
