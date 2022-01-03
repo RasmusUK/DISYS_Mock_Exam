@@ -80,12 +80,13 @@ func readInputForever() {
 		reader := bufio.NewReader(os.Stdin)
 		line, _, _ := reader.ReadLine()
 		if number, err := strconv.Atoi(string(line)); err == nil {
-			sendIncrementRequestToAll(int32(number))
-		} else {
-			fmt.Println("Invalid input")
+			if number > 0 {
+				sendIncrementRequestToAll(int32(number))
+				continue
+			}
 		}
+		fmt.Println("Invalid input. Must be a natural number.")
 	}
-
 }
 
 func sendIncrementRequest(wg *sync.WaitGroup, address string, value int32) {
