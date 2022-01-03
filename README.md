@@ -17,7 +17,7 @@ go run .
 ## How to increment
 - To increment, simply type an integer and press enter.
 - You can only enter natural numbers.
-- If subsequent calls, each must be greater than the prevoius one.
+- If subsequent calls, each must be greater than the previous one on the same node.
 - The call will return the previous value
 ## Good to know
 - Make sure to start all the servers first as the clients will ping the servers and find all the available servers.
