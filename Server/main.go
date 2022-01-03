@@ -30,19 +30,21 @@ type server struct {
 }
 
 func (s server) Increment(_ context.Context, request *gRPC.IncrementRequest) (*gRPC.IncrementResponse, error) {
+	log.Println("Received increment from", request.ClientID[:3], "\nClient increment value:", request.Value, "\nClient request number:", request.RequestID)
 	waitForYourTurn(request.ClientID, request.RequestID)
 	setClientRequestNumber(request.ClientID, request.RequestID)
-	if request.Value <= clientPreviousValue[request.ClientID] {
-		return &gRPC.IncrementResponse{Value: getClientPreviousValue(request.ClientID)}, errors.New("value is not greater than previous one")
+	if request.Value <= getClientPreviousValue(request.ClientID) {
+		return &gRPC.IncrementResponse{Value: 0}, errors.New("value is not greater than previous one")
 	}
 	value := getCurrentValue()
 	setClientPreviousValue(request.ClientID, request.Value)
 	updateCurrentValue(request.Value)
+	log.Println("Updated value to:", getCurrentValue())
 	return &gRPC.IncrementResponse{Value: value}, nil
 }
 
 func (s server) PingServer(_ context.Context, ping *gRPC.Ping) (*gRPC.Empty, error) {
-	log.Println("Received ping from: ", ping.ClientID)
+	log.Println("Received ping from:", ping.ClientID)
 	clientRequestNumber[ping.ClientID] = 0
 	clientPreviousValue[ping.ClientID] = 0
 	return &gRPC.Empty{}, nil
@@ -70,9 +72,12 @@ func initServer() {
 
 func waitForYourTurn(clientID string, requestID int32) {
 	for {
+		log.Println("Current client request number:", requestID)
 		if getClientRequestNumber(clientID) == requestID-1 {
+			log.Println("Correct order. Permission granted.")
 			break
 		}
+		log.Println("Wrong request order. Waiting.")
 		time.Sleep(time.Millisecond * 500)
 	}
 }
@@ -92,7 +97,7 @@ func getClientRequestNumber(clientID string) (requestID int32) {
 func setClientPreviousValue(clientID string, value int32) {
 	clientPreviousValueLock.Lock()
 	defer clientPreviousValueLock.Unlock()
-	clientPreviousValue[clientID] += value
+	clientPreviousValue[clientID] = value
 }
 
 func getClientPreviousValue(clientID string) (requestID int32) {

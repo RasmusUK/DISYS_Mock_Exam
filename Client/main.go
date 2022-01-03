@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"os"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 )
 
 var ID string
+var previousIncrement int32 = 0
 var serverAddresses = make([]string, 0)
 var requestNumber int32 = 0
 var messageChannel = make(chan string, 1)
@@ -52,7 +54,7 @@ func pingServer(wg *sync.WaitGroup, address string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, address, grpc.WithBlock())
+	conn, err := grpc.DialContext(ctx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		return
 	}
@@ -90,14 +92,14 @@ func readInputForever() {
 }
 
 func sendIncrementRequest(wg *sync.WaitGroup, address string, value int32) {
-	log.Println("Send increment request to:", address)
-
 	defer wg.Done()
+
+	log.Println("Send increment request to:", address)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, address, grpc.WithBlock())
+	conn, err := grpc.DialContext(ctx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		log.Println(address, "did not respond - deleting from server addresses")
 		removeAddressFromAddresses(address)
@@ -122,9 +124,11 @@ func sendIncrementRequest(wg *sync.WaitGroup, address string, value int32) {
 	log.Println("Received response from:", address)
 
 	if err != nil {
-		sendToChannelIfNotFull("Your increment is too low\n Previous increment: " + string(response.Value))
+		message := ("Your increment is too low\nPrevious increment was: " + strconv.Itoa(int(previousIncrement)) + "\nNext increment must be greater")
+		sendToChannelIfNotFull(message)
 	} else {
-		sendToChannelIfNotFull("Successful increment\nPrevious value: " + string(response.Value))
+		sendToChannelIfNotFull("Successful increment\nPrevious value: " + strconv.Itoa(int(response.Value)))
+		previousIncrement = value
 	}
 }
 
